@@ -1,0 +1,394 @@
+---
+// Plain GET form to /search — works with JS disabled (submit button), progressively enhanced
+// below with an auto-submit-on-change script where it's wired up. Used only on /search itself
+// now — Nav.astro has its own lean, filter-free search field.
+import { CATEGORY_ORDER, CATEGORIES } from '../lib/categories';
+
+interface Props {
+  query?: string;
+  types?: string[];
+  range?: string;
+  id?: string;
+  autofocus?: boolean;
+}
+
+const { query = '', types = [], range = 'all', id = 'search', autofocus = false } = Astro.props;
+---
+<form class="search-bar" action="/search" method="get" role="search" aria-label="Search articles" data-search-bar autocomplete="off">
+  <div class="search-field">
+    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"></circle>
+      <path d="m21 21-4.3-4.3"></path>
+    </svg>
+    <input
+      type="search"
+      name="q"
+      id={`${id}-q`}
+      value={query}
+      placeholder="Search articles, authors…"
+      aria-label="Search query"
+      autocomplete="off"
+      autofocus={autofocus}
+      data-search-bar-input
+    />
+    <div class="search-bar-history" data-search-bar-history hidden></div>
+  </div>
+
+  <div class="search-filters">
+    <fieldset class="filter-field filter-sections">
+      <legend class="filter-label">Sections</legend>
+      <div class="section-options">
+        {CATEGORY_ORDER.map((key) => (
+          <label class="section-option">
+            <input type="checkbox" name="type" value={key} checked={types.includes(key)} />
+            <span>{CATEGORIES[key].label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+
+    <label class="filter-field">
+      <span class="filter-label">When</span>
+      <select name="range" id={`${id}-range`}>
+        <option value="all" selected={range === 'all'}>Any time</option>
+        <option value="day" selected={range === 'day'}>Past day</option>
+        <option value="week" selected={range === 'week'}>Past week</option>
+        <option value="month" selected={range === 'month'}>Past month</option>
+        <option value="year" selected={range === 'year'}>Past year</option>
+      </select>
+    </label>
+
+    <button type="submit" class="btn btn-primary search-submit">Search</button>
+  </div>
+</form>
+
+<script>
+  const HISTORY_KEY = 'synchronizer-search-history';
+  const HISTORY_LIMIT = 6;
+
+  function getSearchHistory(): string[] {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list.filter((v) => typeof v === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveSearchQuery(query: string) {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const rest = getSearchHistory().filter((q) => q.toLowerCase() !== trimmed.toLowerCase());
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify([trimmed, ...rest].slice(0, HISTORY_LIMIT)));
+    } catch {}
+  }
+
+  function clearSearchHistory() {
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+    } catch {}
+  }
+
+  // Every SearchBar instance on the page (there's only ever one — this one — since Nav no
+  // longer renders this component) wires up its own history dropdown independently.
+  document.querySelectorAll<HTMLFormElement>('[data-search-bar]').forEach((form) => {
+    const input = form.querySelector<HTMLInputElement>('[data-search-bar-input]');
+    const historyEl = form.querySelector<HTMLElement>('[data-search-bar-history]');
+    if (!input || !historyEl) return;
+
+    function render() {
+      const typed = (input!.value || '').trim().toLowerCase();
+      const items = getSearchHistory().filter((q) => !typed || q.toLowerCase().includes(typed));
+
+      if (items.length === 0) {
+        historyEl!.innerHTML = '<p class="history-empty">No recent searches</p>';
+        return;
+      }
+
+      historyEl!.innerHTML =
+        items
+          .map(
+            (q) => `
+          <button type="button" class="history-item" data-history-query="${q.replace(/"/g, '&quot;')}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+            <span>${q}</span>
+          </button>`
+          )
+          .join('') + '<button type="button" class="history-clear" data-history-clear>Clear search history</button>';
+
+      historyEl!.querySelectorAll<HTMLButtonElement>('[data-history-query]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          input!.value = btn.dataset.historyQuery || '';
+          close();
+          form.requestSubmit();
+        });
+      });
+
+      historyEl!.querySelector('[data-history-clear]')?.addEventListener('click', () => {
+        clearSearchHistory();
+        render();
+      });
+    }
+
+    function open() {
+      render();
+      historyEl!.removeAttribute('hidden');
+    }
+
+    function close() {
+      historyEl!.setAttribute('hidden', '');
+    }
+
+    input.addEventListener('focus', open);
+    input.addEventListener('input', open);
+    form.addEventListener('submit', () => saveSearchQuery(input.value));
+
+    document.addEventListener('click', (e) => {
+      if (!form.contains(e.target as Node)) close();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close();
+    });
+  });
+</script>
+
+<style>
+  .search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .search-field {
+    position: relative;
+    flex: 1 1 240px;
+    display: flex;
+    align-items: center;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--ink-soft);
+    pointer-events: none;
+  }
+
+  .search-field input {
+    width: 100%;
+    padding: 11px 14px 11px 38px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    transition: var(--transition-theme), border-color 0.15s ease;
+  }
+
+  .search-field input::placeholder {
+    color: var(--ink-soft);
+  }
+
+  .search-field input:focus-visible {
+    border-color: var(--brand-2);
+  }
+
+  /* Clears the native browser "x" clear button so it doesn't collide with our own icon layout
+     at narrow widths — the field is still clearable by selecting and deleting. */
+  .search-field input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  .search-bar-history {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    z-index: 20;
+  }
+
+  .search-bar-history[hidden] {
+    display: none;
+  }
+
+  .search-bar-history :global(.history-item) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 14px;
+    border: none;
+    background: none;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .search-bar-history :global(.history-item span) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-bar-history :global(.history-item svg) {
+    flex-shrink: 0;
+    color: var(--ink-soft);
+  }
+
+  .search-bar-history :global(.history-item:hover) {
+    background: var(--bg-sunken);
+  }
+
+  .search-bar-history :global(.history-clear) {
+    display: block;
+    width: 100%;
+    padding: 8px 14px;
+    border: none;
+    border-top: 1px solid var(--line);
+    background: none;
+    color: var(--brand-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .search-bar-history :global(.history-clear:hover) {
+    background: var(--bg-sunken);
+  }
+
+  .search-bar-history :global(.history-empty) {
+    margin: 0;
+    padding: 12px 14px;
+    color: var(--ink-soft);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-style: italic;
+  }
+
+  .filter-sections {
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .section-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 420px;
+  }
+
+  .section-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: var(--transition-theme), border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .section-option:has(input:checked) {
+    border-color: var(--brand-2);
+    color: var(--brand-2);
+    background: var(--bg-sunken);
+  }
+
+  .section-option input {
+    /* Visually hidden but still keyboard/screen-reader operable — the label itself is the
+       clickable pill, styled via :has() above rather than a custom-drawn checkbox box. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .section-option:focus-within {
+    outline: 2px solid var(--brand-2);
+    outline-offset: 1px;
+  }
+
+  .search-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .filter-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .filter-field select {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    transition: var(--transition-theme), border-color 0.15s ease;
+    cursor: pointer;
+  }
+
+  .filter-field select:focus-visible {
+    border-color: var(--brand-2);
+  }
+
+  .search-submit {
+    align-self: flex-end;
+  }
+
+  @media (max-width: 560px) {
+    .search-filters {
+      width: 100%;
+    }
+    .filter-field {
+      flex: 1 1 auto;
+    }
+    .search-submit {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+  }
+</style>

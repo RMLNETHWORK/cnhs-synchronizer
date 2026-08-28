@@ -1,0 +1,293 @@
+---
+// On-demand rendered, like [category]/index.astro — no getStaticPaths export, so in the
+// project's `output: 'server'` mode this runs per-request rather than being prebuilt. That's
+// required here: search results depend on the request's own query string and (for the
+// popularity sort) a KV read, neither of which exist at build time.
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SearchBar from '../../components/SearchBar.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import { CATEGORY_ORDER, CATEGORIES, type CategoryKey } from '../../lib/categories';
+import { getCardImage } from '../../lib/gallery';
+import { getArticleVideo } from '../../lib/video';
+import { generateHeadlineExcerpts, stripMarkdown, getWordCount } from '../../lib/excerpt';
+import { hashArticleId } from '../../lib/hash';
+import { getViewCounts, getViewCount, type ViewsKV } from '../../lib/views';
+import { env } from 'cloudflare:workers';
+
+type RangeKey = 'day' | 'week' | 'month' | 'year' | 'all';
+type SortField = 'date' | 'popularity' | 'length';
+type SortOrder = 'asc' | 'desc';
+
+const RANGE_DAYS: Record<Exclude<RangeKey, 'all'>, number> = { day: 1, week: 7, month: 30, year: 365 };
+const RANGE_LABEL: Record<RangeKey, string> = {
+  all: 'any time', day: 'the past day', week: 'the past week', month: 'the past month', year: 'the past year',
+};
+
+// Every (field, order) pair the "Sort by" control offers, in the order shown — each option's
+// label speaks to what that field+direction actually means (e.g. "Most popular" instead of a
+// generic "Popularity ↓") so the single combined select stays self-explanatory.
+const SORT_OPTIONS: { value: string; field: SortField; order: SortOrder; label: string }[] = [
+  { value: 'date-desc', field: 'date', order: 'desc', label: 'Newest first' },
+  { value: 'date-asc', field: 'date', order: 'asc', label: 'Oldest first' },
+  { value: 'popularity-desc', field: 'popularity', order: 'desc', label: 'Most popular' },
+  { value: 'popularity-asc', field: 'popularity', order: 'asc', label: 'Least popular' },
+  { value: 'length-desc', field: 'length', order: 'desc', label: 'Longest read' },
+  { value: 'length-asc', field: 'length', order: 'asc', label: 'Shortest read' },
+];
+
+const params = Astro.url.searchParams;
+const query = (params.get('q') || '').trim();
+const typeParam = params.get('type') || 'all';
+const type: CategoryKey | 'all' = CATEGORY_ORDER.includes(typeParam as CategoryKey) ? (typeParam as CategoryKey) : 'all';
+const rangeParam = params.get('range') || 'all';
+const range: RangeKey = (['day', 'week', 'month', 'year'].includes(rangeParam) ? rangeParam : 'all') as RangeKey;
+const sortParam = params.get('sort') || 'date-desc';
+const activeSort = SORT_OPTIONS.find((o) => o.value === sortParam) || SORT_OPTIONS[0];
+
+const hasActiveSearch = query !== '' || type !== 'all' || range !== 'all';
+
+// Flatten every category into one list, tagged with which category each entry came from —
+// everything downstream (filtering, sorting, card rendering) works off this shape rather than
+// juggling per-category arrays.
+interface FlatEntry {
+  category: CategoryKey;
+  entry: Awaited<ReturnType<typeof getCollection>>[number];
+}
+
+let results: FlatEntry[] = [];
+
+if (hasActiveSearch) {
+  const categoriesToSearch = type === 'all' ? CATEGORY_ORDER : [type];
+  const perCategory = await Promise.all(
+    categoriesToSearch.map(async (key) => {
+      const entries = await getCollection(key, ({ data }) => !data.draft);
+      return entries.map((entry) => ({ category: key, entry }));
+    })
+  );
+  let flat = perCategory.flat();
+
+  // Date range: a rolling window ending now, e.g. "week" = last 7 days from this exact
+  // request, not "since the start of the calendar week" — keeps the four options consistent
+  // with each other as pure multiples of a day.
+  if (range !== 'all') {
+    const cutoff = Date.now() - RANGE_DAYS[range] * 24 * 60 * 60 * 1000;
+    flat = flat.filter(({ entry }) => entry.data.date.valueOf() >= cutoff);
+  }
+
+  // Text query: every whitespace-separated token must appear somewhere across title, author,
+  // or the plain-text body (Markdown stripped, so searching "curfew" matches body prose even
+  // if it's inside emphasis/links). AND-of-tokens rather than a single substring match, so
+  // "barangay curfew" finds an article containing both words even if not adjacent.
+  if (query !== '') {
+    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+    flat = flat.filter(({ entry }) => {
+      const haystack = `${entry.data.title} ${entry.data.author} ${stripMarkdown(entry.body || '')}`.toLowerCase();
+      return tokens.every((token) => haystack.includes(token));
+    });
+  }
+
+  const kv = (env as { VIEWS?: ViewsKV }).VIEWS;
+  const viewCounts = await getViewCounts(kv);
+
+  const scored = flat.map((item) => ({
+    ...item,
+    date: item.entry.data.date.valueOf(),
+    popularity: getViewCount(viewCounts, item.category, item.entry.id),
+    length: getWordCount(item.entry.body),
+  }));
+
+  scored.sort((a, b) => {
+    const diff = a[activeSort.field] - b[activeSort.field];
+    const primary = activeSort.order === 'asc' ? diff : -diff;
+    // Stable, sensible tiebreak: whichever sort is active, fall back to newest-first so ties
+    // (e.g. two articles with 0 views) don't shuffle unpredictably between renders.
+    if (primary !== 0) return primary;
+    return b.date - a.date;
+  });
+
+  results = scored;
+}
+
+const resultCountLabel = `${results.length} ${results.length === 1 ? 'result' : 'results'}`;
+---
+<BaseLayout title="Search" description="Search The Synchronizer's articles by type, date, and more.">
+  <section class="search-hero">
+    <div class="wrap">
+      <span class="eyebrow">Search</span>
+      <h1 class="search-title">Find a story</h1>
+      <p class="search-blurb">Search by keyword, or narrow down by type and date without typing anything at all.</p>
+      <SearchBar id="page-search" query={query} type={type} range={range} autofocus />
+    </div>
+  </section>
+
+  <section class="search-results">
+    <div class="wrap">
+      {hasActiveSearch ? (
+        <>
+          <div class="results-bar">
+            <p class="results-count">
+              {resultCountLabel}
+              {query && <> for “{query}”</>}
+              {type !== 'all' && <> in <strong>{CATEGORIES[type].label}</strong></>}
+              {range !== 'all' && <> from {RANGE_LABEL[range]}</>}
+            </p>
+
+            <form method="get" action="/search" class="sort-form" data-sort-form>
+              <input type="hidden" name="q" value={query} />
+              <input type="hidden" name="type" value={type} />
+              <input type="hidden" name="range" value={range} />
+              <label class="sort-label">
+                <span class="filter-label">Sort by</span>
+                <select name="sort" data-sort-select>
+                  {SORT_OPTIONS.map((opt) => (
+                    <option value={opt.value} selected={opt.value === activeSort.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </label>
+            </form>
+          </div>
+
+          {results.length > 0 ? (
+            <div class="listing-grid">
+              {results.map(({ category, entry }) => {
+                const videoInfo = getArticleVideo(category, entry.id, entry.data.videoUrl);
+                const thumb = getCardImage(category, entry.id, entry.data.classImage) || videoInfo?.thumbnailUrl;
+                const { title: titleExcerpt, lead: leadExcerpt } = generateHeadlineExcerpts(entry.data.title, entry.body);
+                const meta = CATEGORIES[category];
+                return (
+                  <ArticleCard
+                    title={titleExcerpt || entry.data.title}
+                    excerpt={leadExcerpt}
+                    date={entry.data.date}
+                    author={entry.data.author}
+                    href={`/${meta.slug}/?${meta.paramName}=${hashArticleId(category, entry.id)}`}
+                    image={thumb}
+                    imageAlt={entry.data.classImageAlt}
+                    isVideo={!!videoInfo}
+                    categoryLabel={meta.label}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p class="empty-state">No articles matched that search. Try a broader keyword, or widen the date range.</p>
+          )}
+        </>
+      ) : (
+        <p class="empty-state">Type a keyword above, or pick a type and date range — no need for both.</p>
+      )}
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // Progressive enhancement: the sort <select> submits its form on change instead of needing
+  // an explicit button click. Plain <form method="get"> is the fallback if JS is off — the
+  // select still works, it just needs the (hidden, but present) submit to be triggered
+  // manually, which browsers do via Enter in most other fields on the page regardless.
+  const sortForm = document.querySelector('[data-sort-form]');
+  const sortSelect = sortForm?.querySelector('[data-sort-select]');
+  sortSelect?.addEventListener('change', () => {
+    (sortForm as HTMLFormElement)?.submit();
+  });
+</script>
+
+<style>
+  .search-hero {
+    padding-block: 44px 28px;
+    border-bottom: 1px solid var(--line);
+    background: radial-gradient(ellipse 50% 60% at 90% 0%, var(--brand-glow), transparent 70%);
+  }
+
+  .search-title {
+    font-size: clamp(32px, 5vw, 48px);
+    margin: 8px 0 8px;
+  }
+
+  .search-blurb {
+    color: var(--ink-soft);
+    font-size: var(--text-base);
+    max-width: 60ch;
+    margin: 0 0 24px;
+  }
+
+  .search-results {
+    padding-block: 32px 64px;
+  }
+
+  .results-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .results-count {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .results-count strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .sort-form {
+    display: flex;
+  }
+
+  .sort-label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .filter-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .sort-label select {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: var(--transition-theme), border-color 0.15s ease;
+  }
+
+  .sort-label select:focus-visible {
+    border-color: var(--brand-2);
+  }
+
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .empty-state {
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 24px 0;
+  }
+
+  @media (max-width: 900px) {
+    .listing-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 560px) {
+    .listing-grid { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,117 @@
+---
+import { CATEGORY_ORDER, CATEGORIES } from '../lib/categories';
+---
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <img src="/images/logo-mark.png" alt="The Synchronizer logo" class="footer-mark" />
+      <p class="footer-name">the <strong>synchronizer</strong></p>
+      <p class="footer-desc">The official student publication in English of Catanduanes National High School.</p>
+    </div>
+
+    <div class="footer-col">
+      <p class="eyebrow">Sections</p>
+      <ul>
+        {CATEGORY_ORDER.map((key) => (
+          <li><a href={`/${CATEGORIES[key].slug}`}>{CATEGORIES[key].label}</a></li>
+        ))}
+        <li><a href="/about">About</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <p class="eyebrow">Reach us</p>
+      <ul class="social-list">
+        <li><a href="https://facebook.com/thecnhssynchronizer" target="_blank" rel="noopener">Facebook — thecnhssynchronizer</a></li>
+        <li><a href="https://instagram.com/cnhs_synchro" target="_blank" rel="noopener">Instagram — cnhs_synchro</a></li>
+        <li><a href="https://tiktok.com/@the_cnhs_synchro" target="_blank" rel="noopener">TikTok — the_cnhs_synchro</a></li>
+        <li><a href="https://x.com/synchro_cnhs" target="_blank" rel="noopener">X — synchro_cnhs</a></li>
+        <li><a href="mailto:thecnhs.synchronizer@gmail.com">thecnhs.synchronizer@gmail.com</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="wrap footer-bottom">
+    <p>&copy; {new Date().getFullYear()} The Synchronizer — Catanduanes National High School.</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--line);
+    margin-top: 64px;
+    transition: var(--transition-theme);
+  }
+
+  .footer-inner {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1.2fr;
+    gap: 40px;
+    padding-block: 48px 32px;
+  }
+
+  .footer-mark {
+    width: 34px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .footer-name {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-md);
+    margin: 0 0 8px;
+  }
+
+  .footer-desc {
+    color: var(--ink-soft);
+    font-size: var(--text-sm);
+    max-width: 32ch;
+    margin: 0;
+  }
+
+  .footer-col ul {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .footer-col a {
+    font-size: var(--text-sm);
+    color: var(--ink-soft);
+    transition: color 0.15s ease;
+  }
+
+  .footer-col a:hover {
+    color: var(--brand-2);
+  }
+
+  .social-list a {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+
+  .footer-bottom {
+    border-top: 1px solid var(--line);
+    padding-block: 16px;
+  }
+
+  .footer-bottom p {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 700px) {
+    .footer-inner {
+      grid-template-columns: 1fr;
+      gap: 28px;
+    }
+  }
+</style>

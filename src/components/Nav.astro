@@ -1,0 +1,724 @@
+---
+import { CATEGORY_ORDER, CATEGORIES } from '../lib/categories';
+const currentPath = Astro.url.pathname;
+// Which section (if any) the current page belongs to — the category listing page and every
+// article page share the same `/${slug}` prefix (articles are `?param=hash` on that same
+// route), so this one check covers both. Drives the nav search field's scope: null means
+// "search everything" (home, about, search page itself), a key means "search this section".
+const activeCategory = CATEGORY_ORDER.find((key) => currentPath.startsWith(`/${CATEGORIES[key].slug}`)) ?? null;
+---
+<header class="site-nav">
+  <div class="wrap nav-top">
+    <div class="nav-top-left">
+      <a href="/" class="brand" aria-label="The Synchronizer, home">
+        <img src="/images/logo-mark.png" alt="" class="brand-mark" />
+        <span class="brand-text">
+          <span class="brand-name">the <strong>synchronizer</strong></span>
+          <span class="brand-tagline">we see. we hear. we notice.</span>
+        </span>
+      </a>
+    </div>
+
+    <div class="nav-top-right">
+      <form class="nav-search-form" action="/search" method="get" role="search" aria-label="Search articles" data-nav-search autocomplete="off">
+        <svg class="nav-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <input
+          type="search"
+          name="q"
+          id="nav-search-q"
+          placeholder={activeCategory ? `Search ${CATEGORIES[activeCategory].label}` : 'Search articles'}
+          aria-label={activeCategory ? `Search ${CATEGORIES[activeCategory].label}` : 'Search articles'}
+          autocomplete="off"
+          data-nav-search-input
+        />
+        {activeCategory && <input type="hidden" name="type" value={activeCategory} />}
+        <div class="nav-search-history" data-nav-search-history hidden></div>
+      </form>
+
+      <div class="nav-utility">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark and light theme" type="button">
+          <svg id="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <button id="menu-toggle" class="menu-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-sidebar" type="button">
+          <span class="bar bar-1"></span>
+          <span class="bar bar-2"></span>
+          <span class="bar bar-3"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cat-row">
+    <div class="wrap">
+      <nav aria-label="Categories" class="cat-nav">
+        {CATEGORY_ORDER.map((key) => {
+          const cat = CATEGORIES[key];
+          const isActive = currentPath.startsWith(`/${cat.slug}`);
+          return (
+            <a href={`/${cat.slug}`} class:list={['cat-link', { active: isActive }]}>
+              {cat.label}
+            </a>
+          );
+        })}
+        <a href="/about" class:list={['cat-link', { active: currentPath.startsWith('/about') }]}>
+          About
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <div class="nav-backdrop" id="nav-backdrop"></div>
+
+  <aside class="mobile-sidebar" id="mobile-sidebar" aria-label="Menu">
+    <div class="sidebar-head">
+      <span class="eyebrow">Menu</span>
+    </div>
+
+    <nav class="sidebar-links" aria-label="Categories, mobile">
+      {CATEGORY_ORDER.map((key, i) => {
+        const cat = CATEGORIES[key];
+        const isActive = currentPath.startsWith(`/${cat.slug}`);
+        return (
+          <a href={`/${cat.slug}`} class:list={['sidebar-link', { active: isActive }]}>
+            <span class="sidebar-link-index">{String(i + 1).padStart(2, '0')}</span>
+            <span class="sidebar-link-label">{cat.label}</span>
+          </a>
+        );
+      })}
+      <a href="/about" class:list={['sidebar-link', { active: currentPath.startsWith('/about') }]}>
+        <span class="sidebar-link-index">{String(CATEGORY_ORDER.length + 1).padStart(2, '0')}</span>
+        <span class="sidebar-link-label">About</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <p class="sidebar-foot-brand gradient-text">the synchronizer</p>
+      <p class="sidebar-tagline">we see. we hear. we notice.</p>
+    </div>
+  </aside>
+</header>
+
+<script>
+  const root = document.documentElement;
+  const stored = localStorage.getItem('synchronizer-theme');
+  const toggle = document.getElementById('theme-toggle');
+
+  function applyTheme(theme: string) {
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem('synchronizer-theme', theme);
+  }
+
+  toggle?.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+  });
+
+  const HISTORY_KEY = 'synchronizer-search-history';
+  const HISTORY_LIMIT = 6;
+
+  function getSearchHistory(): string[] {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list.filter((v) => typeof v === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveSearchQuery(query: string) {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const rest = getSearchHistory().filter((q) => q.toLowerCase() !== trimmed.toLowerCase());
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify([trimmed, ...rest].slice(0, HISTORY_LIMIT)));
+    } catch {
+      // Storage unavailable (private mode, quota, etc.) — search still works, history just won't persist.
+    }
+  }
+
+  function clearSearchHistory() {
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+    } catch {}
+  }
+
+  const navSearchForm = document.querySelector('[data-nav-search]');
+  const navSearchInput = navSearchForm?.querySelector('[data-nav-search-input]') as HTMLInputElement | null;
+  const navSearchHistory = navSearchForm?.querySelector('[data-nav-search-history]') as HTMLElement | null;
+
+  function renderNavSearchHistory() {
+    if (!navSearchHistory) return;
+    const typed = (navSearchInput?.value || '').trim().toLowerCase();
+    const items = getSearchHistory().filter((q) => !typed || q.toLowerCase().includes(typed));
+
+    if (items.length === 0) {
+      navSearchHistory.innerHTML = '<p class="nav-history-empty">No recent searches</p>';
+      return;
+    }
+
+    navSearchHistory.innerHTML =
+      items
+        .map(
+          (q) => `
+        <button type="button" class="nav-history-item" data-history-query="${q.replace(/"/g, '&quot;')}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+          <span>${q}</span>
+        </button>`
+        )
+        .join('') + '<button type="button" class="nav-history-clear" data-history-clear>Clear search history</button>';
+
+    navSearchHistory.querySelectorAll<HTMLButtonElement>('[data-history-query]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (navSearchInput) navSearchInput.value = btn.dataset.historyQuery || '';
+        closeNavSearchHistory();
+        (navSearchForm as HTMLFormElement)?.requestSubmit();
+      });
+    });
+
+    navSearchHistory.querySelector('[data-history-clear]')?.addEventListener('click', () => {
+      clearSearchHistory();
+      renderNavSearchHistory();
+    });
+  }
+
+  function openNavSearchHistory() {
+    renderNavSearchHistory();
+    navSearchHistory?.removeAttribute('hidden');
+  }
+
+  function closeNavSearchHistory() {
+    navSearchHistory?.setAttribute('hidden', '');
+  }
+
+  navSearchInput?.addEventListener('focus', () => {
+    closeMobileMenu();
+    openNavSearchHistory();
+  });
+  navSearchInput?.addEventListener('input', openNavSearchHistory);
+
+  navSearchForm?.addEventListener('submit', () => {
+    if (navSearchInput) saveSearchQuery(navSearchInput.value);
+  });
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as Node;
+    if (navSearchForm && !navSearchForm.contains(target)) closeNavSearchHistory();
+  });
+
+  const menuToggle = document.getElementById('menu-toggle');
+  const sidebar = document.getElementById('mobile-sidebar');
+  const backdrop = document.getElementById('nav-backdrop');
+
+  function openMobileMenu() {
+    closeNavSearchHistory();
+    sidebar?.classList.add('open');
+    backdrop?.classList.add('visible');
+    menuToggle?.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMobileMenu() {
+    sidebar?.classList.remove('open');
+    backdrop?.classList.remove('visible');
+    menuToggle?.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  menuToggle?.addEventListener('click', () => {
+    if (sidebar?.classList.contains('open')) closeMobileMenu();
+    else openMobileMenu();
+  });
+
+  backdrop?.addEventListener('click', closeMobileMenu);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeMobileMenu();
+      closeNavSearchHistory();
+    }
+  });
+</script>
+
+<style>
+  .site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    transition: var(--transition-theme);
+  }
+
+  .nav-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    padding-block: 14px;
+  }
+
+  .nav-top-left, .nav-top-right {
+    width: fit-content;
+  }
+
+  .nav-top-right {
+    display: flex;
+    flex-direction: row;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex-shrink: 1;
+    order: 1;
+  }
+
+  .nav-search-form {
+    order: 2;
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 160px;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+  }
+
+  .nav-utility {
+    order: 3;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-left: 10px;
+  }
+
+  .brand-mark {
+    width: 24px;
+    transform: scale(1.3);
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    min-width: 0;
+  }
+
+  .brand-name {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-tagline {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.05em;
+    color: var(--brand-2);
+  }
+
+  .cat-row {
+    border-top: 1px solid var(--line);
+    transition: var(--transition-theme);
+  }
+
+  .cat-row > .wrap {
+    display: flex;
+    justify-content: center;
+    padding-block: 6px;
+  }
+
+  .cat-nav {
+    display: flex;
+    gap: 4px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .cat-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cat-link {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--text-sm);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    color: var(--ink-soft);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .cat-link:hover {
+    background: var(--bg-sunken);
+    color: var(--ink);
+  }
+
+  .cat-link.active {
+    color: var(--brand-2);
+    background: var(--bg-sunken);
+  }
+
+  #nav-search-q {
+    width: 24vw;
+  }
+
+  .nav-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-soft);
+    pointer-events: none;
+  }
+
+  .nav-search-form input[type='search'] {
+    width: 100%;
+    height: 36px;
+    padding: 0 14px 0 36px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    transition: var(--transition-theme), border-color 0.15s ease;
+  }
+
+  .nav-search-form input[type='search']::placeholder {
+    color: var(--ink-soft);
+  }
+
+  .nav-search-form input[type='search']:focus-visible {
+    outline: none;
+    border-color: var(--brand-2);
+  }
+
+  .nav-search-form input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  .nav-search-history {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    padding-left: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    z-index: 50;
+  }
+
+  .nav-search-history[hidden] {
+    display: none;
+  }
+
+  .nav-history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 14px;
+    border: none;
+    background: none;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .nav-history-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-history-item svg {
+    flex-shrink: 0;
+    color: var(--ink-soft);
+  }
+
+  .nav-history-item:hover {
+    background: var(--bg-sunken);
+  }
+
+  .nav-history-clear {
+    display: block;
+    width: 100%;
+    padding: 8px 14px;
+    border: none;
+    border-top: 1px solid var(--line);
+    background: none;
+    color: var(--brand-2);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .nav-history-clear:hover {
+    background: var(--bg-sunken);
+  }
+
+  .nav-history-empty {
+    margin: 0;
+    padding: 12px 14px;
+    color: var(--ink-soft);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-style: italic;
+  }
+
+  .theme-toggle, .menu-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-theme), border-color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .theme-toggle:hover, .menu-toggle:hover {
+    border-color: var(--brand-2);
+  }
+
+  #icon-moon { display: none; }
+  :global([data-theme='dark']) #icon-sun { display: none; }
+  :global([data-theme='dark']) #icon-moon { display: block; }
+
+  /* Hamburger -> X morph, driven entirely by aria-expanded */
+  .menu-toggle {
+    display: none;
+    position: relative;
+  }
+
+  .menu-toggle .bar {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 16px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: translate(-50%, -50%) translateY(-5px);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .menu-toggle .bar-2 {
+    transform: translate(-50%, -50%);
+  }
+
+  .menu-toggle .bar-3 {
+    transform: translate(-50%, -50%) translateY(5px);
+  }
+
+  .menu-toggle[aria-expanded='true'] .bar-1 {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+
+  .menu-toggle[aria-expanded='true'] .bar-2 {
+    opacity: 0;
+  }
+
+  .menu-toggle[aria-expanded='true'] .bar-3 {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+
+  /* Scrim behind the drawer */
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 3, 12, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 55;
+  }
+
+  .nav-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* The drawer itself */
+  .mobile-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100dvh;
+    width: min(84vw, 320px);
+    background: var(--bg-panel);
+    border-left: 1px solid var(--line);
+    box-shadow: -16px 0 48px rgba(6, 3, 12, 0.28);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    overflow-y: auto;
+  }
+
+  .mobile-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid var(--line);
+    background: radial-gradient(ellipse 100% 100% at 100% 0%, var(--brand-glow), transparent 70%);
+  }
+
+  .sidebar-links {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 10px;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 16px 10px;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    opacity: 0;
+    transform: translateX(14px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .sidebar-link:last-child {
+    border-bottom: none;
+  }
+
+  .mobile-sidebar.open .sidebar-link {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .mobile-sidebar.open .sidebar-link:nth-child(1) { transition-delay: 0.08s; }
+  .mobile-sidebar.open .sidebar-link:nth-child(2) { transition-delay: 0.12s; }
+  .mobile-sidebar.open .sidebar-link:nth-child(3) { transition-delay: 0.16s; }
+  .mobile-sidebar.open .sidebar-link:nth-child(4) { transition-delay: 0.20s; }
+  .mobile-sidebar.open .sidebar-link:nth-child(5) { transition-delay: 0.24s; }
+  .mobile-sidebar.open .sidebar-link:nth-child(6) { transition-delay: 0.28s; }
+  .mobile-sidebar.open .sidebar-link:nth-child(7) { transition-delay: 0.32s; }
+  .mobile-sidebar.open .sidebar-link:nth-child(8) { transition-delay: 0.36s; }
+
+  .sidebar-link-index {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--brand-2);
+    opacity: 0.75;
+  }
+
+  .sidebar-link-label {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition: color 0.15s ease, transform 0.15s ease;
+  }
+
+  .sidebar-link:hover .sidebar-link-label,
+  .sidebar-link:active .sidebar-link-label {
+    color: var(--brand-2);
+    transform: translateX(4px);
+  }
+
+  .sidebar-link.active .sidebar-link-label {
+    color: var(--brand-2);
+  }
+
+  .sidebar-link.active .sidebar-link-index {
+    opacity: 1;
+  }
+
+  .sidebar-foot {
+    margin-top: auto;
+    padding: 18px 20px 24px;
+    border-top: 1px solid var(--line);
+  }
+
+  .sidebar-foot-brand {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 700;
+    font-size: var(--text-md);
+    margin: 0;
+  }
+
+  .sidebar-tagline {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    margin: 4px 0 0;
+  }
+
+  @media (min-width: 761px) {
+    .nav-backdrop,
+    .mobile-sidebar {
+      display: none;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .cat-row { display: none; }
+    .menu-toggle {
+      display: flex;
+      width: 44px;
+      height: 44px;
+      z-index: 61;
+    }
+    .nav-search-form {
+      order: 3;
+      flex: 1 1 100%;
+      max-width: none;
+    }
+    .brand-tagline { display: none; }
+    .brand-name { max-width: 60vw; }
+  }
+</style>

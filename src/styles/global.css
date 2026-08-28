@@ -1,0 +1,189 @@
+@font-face {
+  font-family: 'Caros';
+  src: url('/fonts/caros-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caros';
+  src: url('/fonts/caros-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caros';
+  src: url('/fonts/caros-medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caros';
+  src: url('/fonts/caros-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caros';
+  src: url('/fonts/caros-extrabold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #F6F1E6;
+  --bg-panel: #FFFCF5;
+  --bg-sunken: #EDE4CF;
+  --ink: #2B2418;
+  --ink-soft: #756B58;
+  --line: #E3D8C1;
+  --brand-1: #6B3FA0;
+  --brand-2: #9B5FD6;
+  --brand-glow: rgba(155, 95, 214, 0.26);
+  --accent-contrast: #FFFFFF;
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  --font-display: 'Caros', 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Source Serif 4', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Type scale — keeps meta labels, wordmarks and headings consistent
+     across components instead of one-off pixel values. */
+  --text-2xs: 11px;   /* micro taglines */
+  --text-xs: 12px;    /* mono meta labels: eyebrow, byline, timestamps */
+  --text-sm: 14px;    /* nav links, buttons, secondary copy */
+  --text-md: 16px;    /* wordmarks, compact card titles */
+  --text-base: 17px;  /* body copy, default card titles */
+  --text-lg: 18px;    /* lead excerpts, article body copy */
+  --text-xl: 20px;    /* sub-section headings */
+  --text-2xl: 22px;   /* in-article headings */
+  --text-3xl: 26px;   /* section titles */
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --shadow-soft: 0 8px 30px rgba(69, 52, 22, 0.10);
+  --transition-theme: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0B0714;
+  --bg-panel: #150C22;
+  --bg-sunken: #1D1130;
+  --ink: #F3EEFA;
+  --ink-soft: #B3A3CC;
+  --line: #2C1E42;
+  --accent-contrast: #FFFFFF;
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --paper-grain: none;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image: var(--paper-grain);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.6;
+  transition: var(--transition-theme);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img { max-width: 100%; display: block; }
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brand-2);
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-glow);
+  background: var(--bg-sunken);
+  width: fit-content;
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, var(--brand-1), var(--brand-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--ink);
+  cursor: pointer;
+  transition: var(--transition-theme), transform 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:hover {
+  border-color: var(--brand-2);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+  .btn { padding: 13px 18px; }
+}
+
+.btn-primary {
+  background: linear-gradient(120deg, var(--brand-1), var(--brand-2));
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-2);
+  outline-offset: 2px;
+}

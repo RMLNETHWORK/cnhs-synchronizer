@@ -1,0 +1,75 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import type { HeroArticle } from '../components/Hero.astro';
+import CategorySection from '../components/CategorySection.astro';
+import { CATEGORY_ORDER, CATEGORIES, type CategoryKey } from '../lib/categories';
+import { getCardImage, getGalleryImages } from '../lib/gallery';
+import { getArticleVideo } from '../lib/video';
+import { generateHeadlineExcerpts } from '../lib/excerpt';
+import { hashArticleId } from '../lib/hash';
+
+const collectionsByCategory = Object.fromEntries(
+  await Promise.all(
+    CATEGORY_ORDER.map(async (key) => {
+      const all = await getCollection(key, ({ data }) => !data.draft);
+      all.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+      return [key, all];
+    })
+  )
+);
+
+/** Turns a content-collection entry into the shape <Hero> needs for one carousel slide. */
+function toHeroArticle(categoryKey: CategoryKey, article: any): HeroArticle {
+  const gallery = getGalleryImages(categoryKey, article.id);
+  const video = getArticleVideo(categoryKey, article.id, article.data.videoUrl);
+  const image = getCardImage(categoryKey, article.id, article.data.classImage) || video?.thumbnailUrl;
+  const imageAlt = gallery[0]?.alt || article.data.classImageAlt;
+
+  const { title: titleExcerpt, lead: leadExcerpt } = generateHeadlineExcerpts(article.data.title, article.body);
+
+  return {
+    title: article.data.title,
+    excerpt: titleExcerpt,
+    lead: leadExcerpt,
+    date: article.data.date,
+    author: article.data.author,
+    href: `/${categoryKey}/?${CATEGORIES[categoryKey].paramName}=${hashArticleId(categoryKey, article.id)}`,
+    categoryLabel: CATEGORIES[categoryKey].label,
+    image,
+    imageAlt,
+    isVideo: !!video,
+  };
+}
+
+// Hero carousels: latest 3 per category, newest first (already sorted above).
+const heroNews = collectionsByCategory.news.slice(0, 3).map((a: any) => toHeroArticle('news', a));
+const heroEvents = collectionsByCategory.events.slice(0, 3).map((a: any) => toHeroArticle('events', a));
+const heroSports = collectionsByCategory.sports.slice(0, 3).map((a: any) => toHeroArticle('sports', a));
+
+// Feature/editorial carousel: latest 3 of each, merged and re-sorted chronologically (up to 6 total).
+const heroFeatureEditorial = [
+  ...collectionsByCategory.features.slice(0, 3).map((a: any) => ({ categoryKey: 'features' as CategoryKey, article: a })),
+  ...collectionsByCategory.editorial.slice(0, 3).map((a: any) => ({ categoryKey: 'editorial' as CategoryKey, article: a })),
+]
+  .sort((a, b) => b.article.data.date.valueOf() - a.article.data.date.valueOf())
+  .map(({ categoryKey, article }) => toHeroArticle(categoryKey, article));
+---
+<BaseLayout title="Home">
+  <Hero
+    newsArticles={heroNews}
+    eventsArticles={heroEvents}
+    sportsArticles={heroSports}
+    featureEditorialArticles={heroFeatureEditorial}
+  />
+
+  {CATEGORY_ORDER.map((key) => (
+    <CategorySection
+      label={CATEGORIES[key].label}
+      blurb={CATEGORIES[key].blurb}
+      slug={CATEGORIES[key].slug}
+      articles={collectionsByCategory[key]}
+    />
+  ))}
+</BaseLayout>

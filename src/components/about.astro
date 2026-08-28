@@ -1,0 +1,543 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+/**
+ * The masthead below is modeled on how the newsroom actually reports, not just the
+ * order roles happened to appear in the source document:
+ *
+ *  - Faculty advisers sit above the student chain — they oversee the whole paper,
+ *    so they're drawn at the top with a dashed (advisory, not command) line down
+ *    to the Editor-in-Chief, rather than tacked on as a signature line at the end.
+ *  - The Executive Board runs as a single line of succession: Editor-in-Chief →
+ *    Associate Editor → Managing Editors → Assistant Editors.
+ *  - Three departments branch off the Executive Board as peers, each owning a
+ *    different half of putting out an issue: Section Editors (written content by
+ *    beat), the Creatives Department (visuals and multimedia), and Publication
+ *    Operations (copy, online distribution, and circulation).
+ *  - Each beat's Senior Writers are nested under that beat's own Section Editor
+ *    card, since they write for that section rather than sitting in a separate,
+ *    disconnected "Senior Staff Writers" tier.
+ *  - Junior Staff Writers aren't assigned to a beat in the source roster, so they
+ *    form one shared pool at the base, feeding every section rather than
+ *    reporting to any single one.
+ */
+
+interface Person {
+  title: string;
+  names: string[];
+}
+
+const advisers: Person[] = [
+  { title: 'School Paper Adviser', names: ['Aimee O. Soquerata'] },
+  { title: 'School Paper Co-Adviser', names: ['Louie A. Sicio'] },
+];
+
+const editorInChief = { title: 'Editor-in-Chief', names: ['Joshua Santino Rojas'] };
+const associateEditor = { title: 'Associate Editor', names: ['Maria Erika Tablizo'] };
+
+const managingEditors: Person[] = [
+  { title: 'Senior Managing Editor', names: ['Jian Clyde Naag'] },
+  { title: 'Junior Managing Editor', names: ['Kit Valerie Brojan'] },
+];
+
+const assistantEditors: Person[] = [
+  { title: 'Assistant Editor — Internal Affairs', names: ['Marco Santino Gonzales', 'Erin Alijah Posada'] },
+  { title: 'Assistant Editor — External Affairs', names: ['Rino Faustus Benitez', 'Alyssa Marie Romano'] },
+];
+
+interface Beat {
+  label: string;
+  editors: string[];
+  seniorWriters: string[];
+}
+
+const beats: Beat[] = [
+  { label: 'News', editors: ['Jamilah Ross Molina', 'Jesha Sophia Tabuzo'], seniorWriters: ['Yzaviel Jade Orendain', 'Kem Marie Tano', 'Rizzy Lawrene Trilles'] },
+  { label: 'Opinion', editors: ['Freeda Traquena', 'Aeron Marreol Tiu'], seniorWriters: ['Ysabella Dianela', 'Precious Geanne Concepcion'] },
+  { label: 'Features', editors: ['Francesca Mariah Agustin', 'Jaron Klyde Rumbines'], seniorWriters: ['Rose Danielle Vegim', 'Jaazaniah Cherise Perez', 'Jose Manuel Tenoria'] },
+  { label: 'Sports', editors: ['Argyrol Xeon Ebon', 'Cristian Francois Vargas'], seniorWriters: ['Gaius Peter Lopez', 'Camille Tabo'] },
+  { label: 'Science & Technology', editors: ['Zharina Gianan', 'Shana Yzabel Tabor', 'Therese Beverly Cabrera'], seniorWriters: ['Jeoff Gabriel Vallespin', 'Von Benson Vargas'] },
+];
+
+const creatives: Person[] = [
+  { title: 'Cartoonist/s', names: ['Precious Halija Lorainne Bailon', 'Jhaizza Shyleen Monjardin', 'Sophie Belle Cabrera'] },
+  { title: 'Art Editor/s (Graphics)', names: ['Raven Vargas', 'Asher Vargas'] },
+  { title: 'Chief Photojournalist', names: ['Maria Andrea Cardano'] },
+  { title: 'Photojournalists', names: ['Khailyn Kristle Po', 'Janelle Gianan'] },
+  { title: 'Mobile Journalists', names: ['Brigette Dione Sarmiento', 'Toni Rose Imperial', 'Jodee Nazareno'] },
+  { title: 'Video Editor', names: ['Mark Lemuel Camacho'] },
+  { title: 'Layout Artist', names: ['Zian Razon'] },
+];
+
+const publicationOps: Person[] = [
+  { title: 'Copy Editor/s', names: ['Jared Jade Cervantes', 'Jazmin Faye Baluyut', 'Michael Jay Vargas'] },
+  { title: 'Online Media Editor/s', names: ['Reniela Elisse Vargas', 'Lorraine Guerrero', 'Kate Nathalie Samar'] },
+  { title: 'Circulation Manager/s', names: ['Makkenz Tabuzo', 'Franzrylle Ayessha Olonan', 'Xhaun Jesrey Albaniel'] },
+];
+
+const juniorStaffWriters = [
+  'Rhianna Kate Alcantara', 'Amirrrah Abrielle Altavano', 'Ara Jamille Bagadiong', 'Zian Josh Barcellano',
+  'Keila Cassandra Besa', 'Irianne Ysabella Camacho', 'Belle Kelsey Dayawon', 'Kenn Alfred De Leon',
+  'Glen Martin De Luna', 'Gabrielle Joy Deinla', 'Allyza Domanais', 'Francis Leigh Fabila',
+  'Sean Francis Gan See', 'Kharl Chendreik Gianan', 'Leona Nicole Gonzales', 'Celine Ku',
+  'Rolance Labayog', 'Keisha Ann Magtagnob', 'Yhuwan Miguel Manlangit', 'Kendralyn Matienzo',
+  'Sef Noreen Padua', 'Chloe Angel Rompe', 'Cristof San Juan', 'Jennica Jade Sarmiento',
+  'Liana Margarette Socito', 'Ayesha Syed', 'Denzel Jon Tabios', 'Jhyrene Wrances Tabuzo',
+  'Josuah Zanty Tacorda', 'Marianne Faye Tan', 'Helaine Gael Tanael', 'Kate Louise Tejada',
+  'Janine Elynor Timajo', 'Terrence Jon Tubis', 'Enrique Rafa Valencia', 'Amia Louise Valeza',
+  'Franco Vargas', 'Safira Zashca Yanzon',
+];
+---
+<BaseLayout title="About" description="Meet the editorial staff of The Synchronizer, the official English-language student publication of Catanduanes National High School.">
+  <section class="about-hero">
+    <div class="wrap">
+      <span class="eyebrow">About</span>
+      <h1 class="about-title">The people behind <span class="gradient-text">the paper</span></h1>
+      <p class="about-blurb">
+        The Synchronizer is the official English-language student publication of Catanduanes National High School.
+        Here's how the SY 2026–2027 masthead actually reports: faculty advisers oversee the paper, the Executive
+        Board runs it day to day, and three departments — Section Editors, the Creatives Department, and
+        Publication Operations — each own a different part of putting out an issue.
+      </p>
+    </div>
+  </section>
+
+  <section class="masthead">
+    <div class="wrap">
+
+      <div class="chart">
+        <!-- Faculty advisers: oversee the whole paper, advisory (not command) line down -->
+        <div class="tier">
+          <p class="tier-kicker">Faculty Advisers</p>
+          <div class="row">
+            {advisers.map((p) => (
+              <div class="card compact">
+                <p class="card-title">{p.title}</p>
+                <p class="card-name">{p.names[0]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="connector dashed" aria-hidden="true"></div>
+
+        <!-- Executive line of succession -->
+        <div class="tier">
+          <div class="card lead">
+            <p class="card-title">{editorInChief.title}</p>
+            <p class="card-name">{editorInChief.names[0]}</p>
+          </div>
+        </div>
+        <div class="connector" aria-hidden="true"></div>
+
+        <div class="tier">
+          <div class="card lead-sm">
+            <p class="card-title">{associateEditor.title}</p>
+            <p class="card-name">{associateEditor.names[0]}</p>
+          </div>
+        </div>
+        <div class="connector" aria-hidden="true"></div>
+
+        <div class="tier">
+          <p class="tier-kicker">Managing Editors</p>
+          <div class="row">
+            {managingEditors.map((p) => (
+              <div class="card">
+                <p class="card-title">{p.title}</p>
+                <p class="card-name">{p.names[0]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="connector" aria-hidden="true"></div>
+
+        <div class="tier">
+          <p class="tier-kicker">Assistant Editors</p>
+          <div class="row">
+            {assistantEditors.map((p) => (
+              <div class="card">
+                <p class="card-title">{p.title}</p>
+                <ul class="card-names">
+                  {p.names.map((n) => <li>{n}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Executive Board branches into three peer departments -->
+        <div class="connector" aria-hidden="true"></div>
+        <div class="branch">
+          <div class="branch-columns">
+            <div class="branch-col">
+              <p class="tier-kicker">Section Editors</p>
+              <p class="tier-desc">Written content, by beat</p>
+              <div class="beat-stack">
+                {beats.map((beat) => (
+                  <div class="beat-card">
+                    <p class="beat-label">{beat.label}</p>
+                    <ul class="card-names">
+                      {beat.editors.map((n) => <li>{n}</li>)}
+                    </ul>
+                    {beat.seniorWriters.length > 0 && (
+                      <div class="beat-nested">
+                        <p class="beat-nested-label">Senior Writers</p>
+                        <ul class="card-names muted">
+                          {beat.seniorWriters.map((n) => <li>{n}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div class="branch-col">
+              <p class="tier-kicker">Creatives Department</p>
+              <p class="tier-desc">Visuals, photography & multimedia</p>
+              <div class="role-stack">
+                {creatives.map((p) => (
+                  <div class="card compact wide">
+                    <p class="card-title">{p.title}</p>
+                    <ul class="card-names">
+                      {p.names.map((n) => <li>{n}</li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div class="branch-col">
+              <p class="tier-kicker">Publication Operations</p>
+              <p class="tier-desc">Copy, online media & circulation</p>
+              <div class="role-stack">
+                {publicationOps.map((p) => (
+                  <div class="card compact wide">
+                    <p class="card-title">{p.title}</p>
+                    <ul class="card-names">
+                      {p.names.map((n) => <li>{n}</li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Junior Staff Writers: shared pool feeding every section, not one beat -->
+      <div class="newsroom">
+        <div class="newsroom-connector" aria-hidden="true"></div>
+        <p class="tier-kicker">Junior Staff Writers</p>
+        <p class="tier-desc">The wider newsroom — not assigned to a single beat in the current masthead.</p>
+        <div class="writers-grid">
+          {juniorStaffWriters.map((name) => (
+            <span class="writer-chip">{name}</span>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .about-hero {
+    padding-block: 44px 28px;
+    border-bottom: 1px solid var(--line);
+    background: radial-gradient(ellipse 50% 60% at 90% 0%, var(--brand-glow), transparent 70%);
+  }
+
+  .about-title {
+    font-size: clamp(32px, 5vw, 48px);
+    margin: 8px 0 12px;
+    line-height: 1.1;
+  }
+
+  .about-blurb {
+    color: var(--ink-soft);
+    font-size: var(--text-base);
+    max-width: 68ch;
+    margin: 0;
+  }
+
+  .masthead {
+    padding-block: 52px 72px;
+  }
+
+  .chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .tier {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .tier-kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--brand-2);
+    margin: 0 0 4px;
+    text-align: center;
+  }
+
+  .tier-desc {
+    font-size: var(--text-xs);
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+    text-align: center;
+  }
+
+  /* The vertical connector: a short plain line between single-file tiers.
+     Dashed variant marks the adviser -> EIC link as advisory, not command. */
+  .connector {
+    width: 2px;
+    height: 28px;
+    background: var(--line);
+  }
+
+  .connector.dashed {
+    width: 0;
+    height: 28px;
+    border-left: 2px dashed var(--line);
+    background: none;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 16px 22px;
+    text-align: center;
+    min-width: 210px;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .card:hover {
+    border-color: var(--brand-2);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .card.lead {
+    min-width: 280px;
+    padding: 24px 32px;
+    border-width: 2px;
+    border-color: var(--brand-2);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .card.lead .card-name {
+    font-size: var(--text-2xl);
+  }
+
+  .card.lead-sm {
+    min-width: 240px;
+    border-color: var(--brand-2);
+  }
+
+  .card.lead-sm .card-name {
+    font-size: var(--text-xl);
+  }
+
+  .card.compact {
+    padding: 12px 18px;
+    min-width: 180px;
+  }
+
+  .card.wide {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .card-title {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+  }
+
+  .card-name {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .card-names {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .card-names li {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 600;
+  }
+
+  .card-names.muted li {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+
+  /* Branch: Executive Board splits into three peer departments */
+  .branch {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .branch-columns {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    padding-top: 24px;
+  }
+
+  .branch-columns::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--line);
+  }
+
+  .branch-col {
+    position: relative;
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .branch-col::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    background: var(--line);
+    transform: translateX(-50%);
+  }
+
+  .beat-stack,
+  .role-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .beat-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .beat-card:hover {
+    border-color: var(--brand-2);
+    transform: translateY(-2px);
+  }
+
+  .beat-label {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: var(--text-sm);
+    color: var(--brand-2);
+    margin: 0 0 6px;
+  }
+
+  .beat-nested {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .beat-nested-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 4px;
+  }
+
+  /* Junior Staff Writers: shared foundation, deliberately not wired to one column */
+  .newsroom {
+    margin-top: 44px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .newsroom-connector {
+    display: none;
+  }
+
+  .writers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    max-width: 980px;
+    margin-top: 6px;
+  }
+
+  .writer-chip {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-soft);
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+
+  @media (max-width: 860px) {
+    .branch-columns {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .card,
+    .card.lead,
+    .card.lead-sm,
+    .card.compact {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+</style>

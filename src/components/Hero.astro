@@ -1,0 +1,471 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+export interface HeroArticle {
+  title: string;
+  excerpt?: string;
+  lead?: string;
+  date: Date;
+  author: string;
+  href: string;
+  categoryLabel: string;
+  image?: ImageMetadata | string;
+  imageAlt?: string;
+  isVideo?: boolean;
+}
+
+interface Props {
+  /** Largest panel, right side — up to 3 items, newest first. */
+  newsArticles: HeroArticle[];
+  /** Medium panel, top-left — up to 3 items, newest first. */
+  eventsArticles: HeroArticle[];
+  /** Small panel, bottom-left-left — up to 3 items, newest first. */
+  sportsArticles: HeroArticle[];
+  /** Small panel, bottom-left-right — up to 6 items (features + editorial combined), newest first. */
+  featureEditorialArticles: HeroArticle[];
+}
+
+const { newsArticles, eventsArticles, sportsArticles, featureEditorialArticles } = Astro.props;
+
+const panels = [
+  { size: 'largest', panelClass: 'panel-largest', heading: 'Latest News', emptyLabel: 'news', items: newsArticles },
+  { size: 'medium', panelClass: 'panel-medium', heading: 'Latest Events', emptyLabel: 'event', items: eventsArticles },
+  { size: 'small', panelClass: 'panel-small-1', heading: 'Latest Sports', emptyLabel: 'sports', items: sportsArticles },
+  { size: 'small', panelClass: 'panel-small-2', heading: 'Latest Features & Editorial', emptyLabel: 'feature or editorial', items: featureEditorialArticles },
+] as const;
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+---
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      {panels.map((panel) => (
+        <div class:list={['hero-panel', panel.panelClass, `size-${panel.size}`]} data-panel aria-label={panel.heading}>
+          {panel.items.length > 0 ? (
+            <Fragment>
+              <div class="panel-slides">
+                {panel.items.map((item, i) => {
+                  const isRemoteImage = typeof item.image === 'string';
+                  return (
+                    <a
+                      href={item.href}
+                      class:list={['panel-slide', i === 0 && 'is-active']}
+                      data-slide
+                      aria-hidden={i === 0 ? undefined : 'true'}
+                      tabindex={i === 0 ? undefined : -1}
+                    >
+                      <div class="slide-media" aria-hidden={!item.image}>
+                        {item.image ? (
+                          isRemoteImage ? (
+                            <img src={item.image as string} alt={item.imageAlt || ''} class="slide-img" width={640} height={480} loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 && panel.size === 'largest' ? 'high' : undefined} />
+                          ) : (
+                            <Image src={item.image as ImageMetadata} alt={item.imageAlt || ''} class="slide-img" loading={i === 0 ? 'eager' : 'lazy'} />
+                          )
+                        ) : (
+                          <span class="thumb-glyph" aria-hidden="true">§</span>
+                        )}
+                        {item.isVideo && (
+                          <span class="play-badge" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                          </span>
+                        )}
+                        <span class="slide-scrim" aria-hidden="true"></span>
+                      </div>
+                      <div class="slide-copy">
+                        <span class="slide-badge">{item.categoryLabel}</span>
+                        <h2 class="slide-title">{item.excerpt || item.title}</h2>
+                        {item.lead && <p class="slide-lead">{item.lead}</p>}
+                        <p class="slide-meta">{formatDate(item.date)}</p>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+              {panel.items.length > 1 && (
+                <div class="panel-dots" role="tablist" aria-label={`More ${panel.heading.toLowerCase()}`}>
+                  {panel.items.map((_, i) => (
+                    <button
+                      type="button"
+                      class:list={['panel-dot', i === 0 && 'is-active']}
+                      data-dot
+                      aria-current={i === 0 ? 'true' : undefined}
+                      aria-label={`Show item ${i + 1} of ${panel.items.length}`}
+                    ></button>
+                  ))}
+                </div>
+              )}
+            </Fragment>
+          ) : (
+            <div class="panel-empty">
+              <span class="thumb-glyph" aria-hidden="true">§</span>
+              <p>No {panel.emptyLabel} articles yet.</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding-block: 32px 24px;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 0%, var(--brand-glow), transparent 70%);
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1.15fr 1fr;
+    gap: 14px;
+    aspect-ratio: 2.15 / 1;
+    max-height: 640px;
+  }
+
+  /* Largest article — right side, spans both rows */
+  .panel-largest {
+    grid-column: 3 / 5;
+    grid-row: 1 / 3;
+  }
+
+  /* Medium article — top-left, spans left half */
+  .panel-medium {
+    grid-column: 1 / 3;
+    grid-row: 1;
+  }
+
+  /* Small articles — bottom-left, split in half */
+  .panel-small-1 {
+    grid-column: 1 / 2;
+    grid-row: 2;
+  }
+
+  .panel-small-2 {
+    grid-column: 2 / 3;
+    grid-row: 2;
+  }
+
+  .hero-panel {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-sunken);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .panel-slides {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .panel-slide {
+    position: absolute;
+    inset: 0;
+    display: block;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease;
+  }
+
+  .panel-slide.is-active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .slide-media {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  }
+
+  .slide-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: ease-in-out .17s;
+  }
+
+  .slide-img:hover {
+    transform: scale(1.1);
+  }
+
+  .thumb-glyph {
+    font-family: var(--font-display);
+    font-size: 40px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .slide-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.32) 42%, transparent 68%);
+    pointer-events: none;
+  }
+
+  .play-badge {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .slide-copy {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 18px 20px;
+    z-index: 1;
+  }
+
+  .slide-badge {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: var(--text-2xs);
+    color: #fff;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+  }
+
+  .slide-title {
+    color: #fff;
+    font-size: clamp(18px, 2vw, 30px);
+    line-height: 1.16;
+    margin: 0 0 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .slide-lead {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    margin: 0 0 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .slide-meta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0;
+  }
+
+  /* Size-specific type scale */
+  .size-medium .slide-title {
+    font-size: clamp(16px, 1.5vw, 22px);
+    -webkit-line-clamp: 2;
+  }
+
+  .size-medium .slide-lead {
+    -webkit-line-clamp: 1;
+  }
+
+  .size-small .slide-title {
+    font-size: clamp(14px, 1.1vw, 17px);
+    -webkit-line-clamp: 2;
+  }
+
+  .size-small .slide-copy {
+    padding: 12px 14px;
+  }
+
+  .size-small .slide-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    margin-bottom: 6px;
+  }
+
+  .size-small .slide-lead,
+  .size-small .slide-meta {
+    display: none;
+  }
+
+  /* Scroll/carousel dots */
+  .panel-dots {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 2;
+    display: flex;
+    gap: 6px;
+  }
+
+  .size-small .panel-dots {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .panel-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  .panel-dot.is-active {
+    background: #fff;
+    transform: scale(1.2);
+  }
+
+  .panel-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    padding: 16px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  .panel-empty .thumb-glyph {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .panel-empty p {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+
+  @media (max-width: 900px) {
+    .hero-grid {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      aspect-ratio: auto;
+      max-height: none;
+    }
+
+    .panel-largest {
+      grid-column: 1 / 3;
+      grid-row: 1;
+      aspect-ratio: 16 / 10;
+    }
+
+    .panel-medium {
+      grid-column: 1 / 3;
+      grid-row: 2;
+      aspect-ratio: 16 / 9;
+    }
+
+    .panel-small-1 {
+      grid-column: 1 / 2;
+      grid-row: 3;
+      aspect-ratio: 4 / 3;
+    }
+
+    .panel-small-2 {
+      grid-column: 2 / 3;
+      grid-row: 3;
+      aspect-ratio: 4 / 3;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .hero {
+      padding-block: 20px 16px;
+    }
+    .slide-title {
+      font-size: clamp(16px, 4.4vw, 22px);
+    }
+  }
+</style>
+
+<script>
+  const panels = document.querySelectorAll<HTMLElement>('[data-panel]');
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  panels.forEach((panel) => {
+    const slides = Array.from(panel.querySelectorAll<HTMLElement>('[data-slide]'));
+    const dots = Array.from(panel.querySelectorAll<HTMLButtonElement>('[data-dot]'));
+    if (slides.length <= 1) return;
+
+    let index = 0;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    function show(next: number) {
+      index = (next + slides.length) % slides.length;
+      slides.forEach((slide, i) => {
+        const active = i === index;
+        slide.classList.toggle('is-active', active);
+        if (active) {
+          slide.removeAttribute('aria-hidden');
+          slide.removeAttribute('tabindex');
+        } else {
+          slide.setAttribute('aria-hidden', 'true');
+          slide.setAttribute('tabindex', '-1');
+        }
+      });
+      dots.forEach((dot, i) => {
+        const active = i === index;
+        dot.classList.toggle('is-active', active);
+        if (active) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
+      });
+    }
+
+    function start() {
+      if (prefersReduced) return;
+      stop();
+      timer = setInterval(() => show(index + 1), 6000);
+    }
+
+    function stop() {
+      if (timer) {
+        clearInterval(timer);
+        timer = undefined;
+      }
+    }
+
+    dots.forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        show(i);
+        start();
+      });
+    });
+
+    panel.addEventListener('mouseenter', stop);
+    panel.addEventListener('mouseleave', start);
+    panel.addEventListener('focusin', stop);
+    panel.addEventListener('focusout', start);
+
+    start();
+  });
+</script>

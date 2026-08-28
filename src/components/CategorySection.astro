@@ -1,0 +1,129 @@
+---
+import ArticleCard from './ArticleCard.astro';
+import { getCardImage } from '../lib/gallery';
+import { getArticleVideo } from '../lib/video';
+import { generateHeadlineExcerpts } from '../lib/excerpt';
+import { hashArticleId } from '../lib/hash';
+import { CATEGORIES, type CategoryKey } from '../lib/categories';
+
+interface ArticleLike {
+  id: string;
+  body?: string;
+  data: { title: string; date: Date; author: string; classImage?: any; classImageAlt?: string; videoUrl?: string };
+}
+
+interface Props {
+  label: string;
+  blurb: string;
+  slug: string;
+  articles: ArticleLike[];
+}
+
+const { label, blurb, slug, articles } = Astro.props;
+const shown = articles.slice(0, 5);
+const hasMore = articles.length > 5;
+---
+<section class="cat-section" aria-labelledby={`section-${slug}`}>
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">{blurb}</span>
+        <h2 id={`section-${slug}`} class="section-title">{label}</h2>
+      </div>
+      <a href={`/${slug}`} class="btn see-more">
+        See more
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </a>
+    </div>
+
+    {shown.length > 0 ? (
+      <div class="card-grid">
+        {shown.map((article) => {
+          const videoInfo = getArticleVideo(slug, article.id, article.data.videoUrl);
+          const thumb = getCardImage(slug, article.id, article.data.classImage) || videoInfo?.thumbnailUrl;
+          const { title: titleExcerpt, lead: leadExcerpt } = generateHeadlineExcerpts(article.data.title, article.body);
+          return (
+            <ArticleCard
+              title={titleExcerpt || article.data.title}
+              excerpt={leadExcerpt}
+              date={article.data.date}
+              author={article.data.author}
+              href={`/${slug}/?${CATEGORIES[slug as CategoryKey].paramName}=${hashArticleId(slug, article.id)}`}
+              size="compact"
+              image={thumb}
+              imageAlt={article.data.classImageAlt}
+              isVideo={!!videoInfo}
+            />
+          );
+        })}
+      </div>
+    ) : (
+      <p class="empty-state">No {label.toLowerCase()} articles yet. Once writers send content in, it'll show up here.</p>
+    )}
+
+    {hasMore && (
+      <a href={`/${slug}`} class="mobile-more">See all {label.toLowerCase()} articles →</a>
+    )}
+  </div>
+</section>
+
+<style>
+  .cat-section {
+    padding-block: 40px;
+    border-top: 1px solid var(--line);
+  }
+
+  .section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    gap: 16px;
+  }
+
+  .section-title {
+    font-size: var(--text-3xl);
+    margin-top: 4px;
+  }
+
+  .see-more {
+    flex-shrink: 0;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+
+  .empty-state {
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 24px 0;
+  }
+
+  .mobile-more {
+    display: none;
+  }
+
+  @media (max-width: 1000px) {
+    .card-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 700px) {
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+    .see-more { display: none; }
+    .mobile-more {
+      display: inline-block;
+      margin-top: 18px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--brand-2);
+      font-size: var(--text-sm);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .card-grid { grid-template-columns: 1fr; }
+  }
+</style>

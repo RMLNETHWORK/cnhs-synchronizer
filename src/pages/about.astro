@@ -1,0 +1,351 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+interface Group {
+  title: string;
+  names: string[];
+}
+
+interface Tier {
+  eyebrow: string;
+  heading: string;
+  groups: Group[];
+  /** Visual weight: bigger cards for the top of the masthead, smaller further down. */
+  emphasis?: 'lead' | 'standard' | 'compact';
+}
+
+const advisers: Group[] = [
+  { title: 'School Paper Adviser', names: ['Aimee O. Soquerata'] },
+  { title: 'School Paper Co-Adviser', names: ['Louie A. Sicio'] },
+];
+
+const tiers: Tier[] = [
+  {
+    eyebrow: 'Executive Board',
+    heading: 'Editor-in-Chief',
+    emphasis: 'lead',
+    groups: [{ title: 'Editor-in-Chief', names: ['Joshua Santino Rojas'] }],
+  },
+  {
+    eyebrow: 'Executive Board',
+    heading: 'Associate Editor',
+    emphasis: 'lead',
+    groups: [{ title: 'Associate Editor', names: ['Maria Erika Tablizo'] }],
+  },
+  {
+    eyebrow: 'Executive Board',
+    heading: 'Managing Editors',
+    groups: [
+      { title: 'Senior Managing Editor', names: ['Jian Clyde Naag'] },
+      { title: 'Junior Managing Editor', names: ['Kit Valerie Brojan'] },
+    ],
+  },
+  {
+    eyebrow: 'Executive Board',
+    heading: 'Assistant Editors',
+    groups: [
+      { title: 'Assistant Editor — Internal Affairs', names: ['Marco Santino Gonzales', 'Erin Alijah Posada'] },
+      { title: 'Assistant Editor — External Affairs', names: ['Rino Faustus Benitez', 'Alyssa Marie Romano'] },
+    ],
+  },
+  {
+    eyebrow: 'Section Editors',
+    heading: 'Section Editors',
+    groups: [
+      { title: 'News Editor/s', names: ['Jamilah Ross Molina', 'Jesha Sophia Tabuzo'] },
+      { title: 'Opinion Editor/s', names: ['Freeda Traquena', 'Aeron Marreol Tiu'] },
+      { title: 'Features Editor/s', names: ['Francesca Mariah Agustin', 'Jaron Klyde Rumbines'] },
+      { title: 'Sports Editor/s', names: ['Argyrol Xeon Ebon', 'Cristian Francois Vargas'] },
+      { title: 'Science and Technology Editor/s', names: ['Zharina Gianan', 'Shana Yzabel Tabor', 'Therese Beverly Cabrera'] },
+    ],
+  },
+  {
+    eyebrow: 'Creatives Department',
+    heading: 'Creatives Department',
+    groups: [
+      { title: 'Cartoonist/s', names: ['Precious Halija Lorainne Bailon', 'Jhaizza Shyleen Monjardin', 'Sophie Belle Cabrera'] },
+      { title: 'Art Editor/s (Graphics)', names: ['Raven Vargas', 'Asher Vargas'] },
+      { title: 'Chief Photojournalist', names: ['Maria Andrea Cardano'] },
+      { title: 'Photojournalists', names: ['Khailyn Kristle Po', 'Janelle Gianan'] },
+      { title: 'Mobile Journalists', names: ['Brigette Dione Sarmiento', 'Toni Rose Imperial', 'Jodee Nazareno'] },
+      { title: 'Video Editor', names: ['Mark Lemuel Camacho'] },
+      { title: 'Layout Artist', names: ['Zian Razon'] },
+    ],
+  },
+  {
+    eyebrow: 'Editorial Support',
+    heading: 'Copy, Media & Circulation',
+    groups: [
+      { title: 'Copy Editor/s', names: ['Jared Jade Cervantes', 'Jazmin Faye Baluyut', 'Michael Jay Vargas'] },
+      { title: 'Online Media Editor/s', names: ['Reniela Elisse Vargas', 'Lorraine Guerrero', 'Kate Nathalie Samar'] },
+      { title: 'Circulation Manager/s', names: ['Makkenz Tabuzo', 'Franzrylle Ayessha Olonan', 'Xhaun Jesrey Albaniel'] },
+    ],
+  },
+  {
+    eyebrow: 'Senior Staff Writers',
+    heading: 'Senior Staff Writers',
+    groups: [
+      { title: 'Senior News Writers', names: ['Yzaviel Jade Orendain', 'Kem Marie Tano', 'Rizzy Lawrene Trilles'] },
+      { title: 'Senior Sports Writers', names: ['Gaius Peter Lopez', 'Camille Tabo'] },
+      { title: 'Senior Features Writers', names: ['Rose Danielle Vegim', 'Jaazaniah Cherise Perez', 'Jose Manuel Tenoria'] },
+      { title: 'Senior Opinion Writers', names: ['Ysabella Dianela', 'Precious Geanne Concepcion'] },
+      { title: 'Senior Science and Technology Writers', names: ['Jeoff Gabriel Vallespin', 'Von Benson Vargas'] },
+    ],
+  },
+];
+
+const juniorStaffWriters = [
+  'Rhianna Kate Alcantara', 'Amirrrah Abrielle Altavano', 'Ara Jamille Bagadiong', 'Zian Josh Barcellano',
+  'Keila Cassandra Besa', 'Irianne Ysabella Camacho', 'Belle Kelsey Dayawon', 'Kenn Alfred De Leon',
+  'Glen Martin De Luna', 'Gabrielle Joy Deinla', 'Allyza Domanais', 'Francis Leigh Fabila',
+  'Sean Francis Gan See', 'Kharl Chendreik Gianan', 'Leona Nicole Gonzales', 'Celine Ku',
+  'Rolance Labayog', 'Keisha Ann Magtagnob', 'Yhuwan Miguel Manlangit', 'Kendralyn Matienzo',
+  'Sef Noreen Padua', 'Chloe Angel Rompe', 'Cristof San Juan', 'Jennica Jade Sarmiento',
+  'Liana Margarette Socito', 'Ayesha Syed', 'Denzel Jon Tabios', 'Jhyrene Wrances Tabuzo',
+  'Josuah Zanty Tacorda', 'Marianne Faye Tan', 'Helaine Gael Tanael', 'Kate Louise Tejada',
+  'Janine Elynor Timajo', 'Terrence Jon Tubis', 'Enrique Rafa Valencia', 'Amia Louise Valeza',
+  'Franco Vargas', 'Safira Zashca Yanzon',
+];
+---
+<BaseLayout title="About" description="Meet the editorial staff of The Synchronizer, the official English-language student publication of Catanduanes National High School.">
+  <section class="about-hero">
+    <div class="wrap">
+      <span class="eyebrow">About</span>
+      <h1 class="about-title">The people behind <span class="gradient-text">the paper</span></h1>
+      <p class="about-blurb">
+        The Synchronizer is the official English-language student publication of Catanduanes National High School,
+        run entirely by its student staff under the guidance of the school paper advisers. Here's the full
+        masthead for SY 2026–2027, from the Editor-in-Chief down to our newest junior writers.
+      </p>
+    </div>
+  </section>
+
+  <section class="masthead">
+    <div class="wrap">
+      <div class="tree">
+        <div class="tree-node advisers">
+          <p class="node-kicker">Guided by</p>
+          <div class="adviser-row">
+            {advisers.map((group) => (
+              <div class="adviser-card">
+                <p class="role-title">{group.title}</p>
+                <p class="role-name">{group.names[0]}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {tiers.map((tier) => (
+          <div class:list={['tree-node', tier.emphasis || 'standard']}>
+            <p class="node-kicker">{tier.eyebrow}</p>
+            <div class:list={['group-row', { solo: tier.groups.length === 1 }]}>
+              {tier.groups.map((group) => (
+                <div class="role-card">
+                  <p class="role-title">{group.title}</p>
+                  <ul class="role-names">
+                    {group.names.map((name) => (
+                      <li>{name}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div class="tree-node compact">
+          <p class="node-kicker">Junior Staff Writers</p>
+          <div class="writers-grid">
+            {juniorStaffWriters.map((name) => (
+              <span class="writer-chip">{name}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .about-hero {
+    padding-block: 44px 28px;
+    border-bottom: 1px solid var(--line);
+    background: radial-gradient(ellipse 50% 60% at 90% 0%, var(--brand-glow), transparent 70%);
+  }
+
+  .about-title {
+    font-size: clamp(32px, 5vw, 48px);
+    margin: 8px 0 12px;
+    line-height: 1.1;
+  }
+
+  .about-blurb {
+    color: var(--ink-soft);
+    font-size: var(--text-base);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .masthead {
+    padding-block: 48px 72px;
+  }
+
+  /* A vertical spine running through the tree gives the "org chart" read without
+     needing per-node connector lines, which don't hold up on narrow screens. */
+  .tree {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
+  }
+
+  .tree::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    background: linear-gradient(var(--line), var(--line));
+    transform: translateX(-50%);
+    z-index: 0;
+  }
+
+  .tree-node {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .node-kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--brand-2);
+    background: var(--bg);
+    padding: 4px 12px;
+    margin: 0 0 14px;
+  }
+
+  .adviser-row,
+  .group-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .group-row.solo {
+    max-width: 320px;
+    margin: 0 auto;
+  }
+
+  .adviser-card,
+  .role-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    min-width: 200px;
+    flex: 1 1 220px;
+    max-width: 320px;
+    text-align: center;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .adviser-card:hover,
+  .role-card:hover {
+    border-color: var(--brand-2);
+    transform: translateY(-2px);
+  }
+
+  .tree-node.lead .role-card {
+    max-width: 360px;
+    padding: 22px 26px;
+    border-width: 2px;
+    border-color: var(--brand-2);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .tree-node.lead .role-title {
+    font-size: var(--text-sm);
+  }
+
+  .tree-node.lead .role-names li {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .role-title {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+  }
+
+  .role-names {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .role-names li {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 600;
+  }
+
+  .adviser-card .role-name {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .tree-node.advisers .adviser-card {
+    background: var(--bg-sunken);
+  }
+
+  .tree-node.compact {
+    margin-top: 4px;
+  }
+
+  .writers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    max-width: 980px;
+  }
+
+  .writer-chip {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink-soft);
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+
+  @media (max-width: 700px) {
+    .adviser-card,
+    .role-card {
+      min-width: 0;
+      flex: 1 1 100%;
+    }
+  }
+</style>

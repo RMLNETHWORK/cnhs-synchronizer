@@ -1,0 +1,17 @@
+# Optional. This file is NOT required for the existing git-based Cloudflare Pages deploy
+# (Pages dashboard build settings still control that, per README.md). It exists only so
+# `npm run dev` can simulate the "VIEWS" KV namespace locally — without it, view counts are
+# simply not tracked in dev and the popularity sort on /search treats everything as 0 views,
+# which is a safe default, not a broken one.
+#
+# To make popularity tracking real (both locally and in production), see the "Popularity
+# tracking (KV setup)" section in README.md — it walks through creating the namespace and
+# binding it both here (local) and in the Cloudflare Pages dashboard (production).
+
+name = "synchronizer"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = "./dist"
+
+[[kv_namespaces]]
+binding = "VIEWS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"

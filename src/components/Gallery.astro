@@ -1,0 +1,262 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface GalleryImage {
+  src: ImageMetadata;
+  alt: string;
+  caption?: string;
+}
+
+interface Props {
+  images: GalleryImage[];
+}
+
+const { images } = Astro.props;
+const galleryId = `gallery-${Math.random().toString(36).slice(2, 9)}`;
+---
+{images.length > 0 && (
+  <section class="gallery" aria-labelledby={`${galleryId}-heading`}>
+    <h2 id={`${galleryId}-heading`} class="gallery-title">In Photos</h2>
+    <div class="gallery-grid" data-gallery={galleryId}>
+      {images.map((img, i) => (
+        <button
+          type="button"
+          class="gallery-thumb"
+          data-index={i}
+          aria-label={`Open photo ${i + 1} of ${images.length}${img.caption || img.alt ? `: ${img.caption || img.alt}` : ''}`}
+        >
+          <Image src={img.src} alt={img.alt} width={400} height={400} class="gallery-thumb-img" />
+        </button>
+      ))}
+    </div>
+
+    <div class="lightbox" data-lightbox={galleryId} hidden>
+      <button type="button" class="lightbox-close" aria-label="Close gallery">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+      <button type="button" class="lightbox-nav lightbox-prev" aria-label="Previous photo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"></path></svg>
+      </button>
+      <div class="lightbox-stage">
+        {images.map((img, i) => (
+          <Image
+            src={img.src}
+            alt={img.alt}
+            width={1400}
+            height={1400}
+            class="lightbox-img"
+            data-lightbox-slide={i}
+            data-caption={img.caption || ''}
+            loading={i === 0 ? 'eager' : 'lazy'}
+          />
+        ))}
+        <p class="lightbox-caption" data-lightbox-caption></p>
+      </div>
+      <button type="button" class="lightbox-nav lightbox-next" aria-label="Next photo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"></path></svg>
+      </button>
+      <p class="lightbox-counter" data-lightbox-counter></p>
+    </div>
+  </section>
+)}
+
+<script>
+  function initGalleries() {
+    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((grid) => {
+      const id = grid.dataset.gallery;
+      const lightbox = document.querySelector<HTMLElement>(`[data-lightbox="${id}"]`);
+      if (!lightbox || (lightbox as any)._wired) return;
+      (lightbox as any)._wired = true;
+
+      const thumbs = Array.from(grid.querySelectorAll<HTMLButtonElement>('.gallery-thumb'));
+      const slides = Array.from(lightbox.querySelectorAll<HTMLImageElement>('[data-lightbox-slide]'));
+      const counter = lightbox.querySelector<HTMLElement>('[data-lightbox-counter]');
+      const captionEl = lightbox.querySelector<HTMLElement>('[data-lightbox-caption]');
+      const closeBtn = lightbox.querySelector<HTMLButtonElement>('.lightbox-close');
+      const prevBtn = lightbox.querySelector<HTMLButtonElement>('.lightbox-prev');
+      const nextBtn = lightbox.querySelector<HTMLButtonElement>('.lightbox-next');
+      let current = 0;
+      let lastFocused: HTMLElement | null = null;
+
+      function show(index: number) {
+        current = (index + slides.length) % slides.length;
+        slides.forEach((s, i) => s.classList.toggle('active', i === current));
+        if (counter) counter.textContent = `${current + 1} / ${slides.length}`;
+        if (captionEl) captionEl.textContent = slides[current]?.dataset.caption || '';
+      }
+
+      function open(index: number) {
+        lastFocused = document.activeElement as HTMLElement;
+        show(index);
+        lightbox!.hidden = false;
+        document.body.style.overflow = 'hidden';
+        closeBtn?.focus();
+      }
+
+      function close() {
+        lightbox!.hidden = true;
+        document.body.style.overflow = '';
+        lastFocused?.focus();
+      }
+
+      thumbs.forEach((thumb, i) => {
+        thumb.addEventListener('click', () => open(i));
+      });
+
+      closeBtn?.addEventListener('click', close);
+      prevBtn?.addEventListener('click', () => show(current - 1));
+      nextBtn?.addEventListener('click', () => show(current + 1));
+
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) close();
+      });
+
+      lightbox.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') close();
+        if (e.key === 'ArrowLeft') show(current - 1);
+        if (e.key === 'ArrowRight') show(current + 1);
+      });
+    });
+  }
+
+  initGalleries();
+  document.addEventListener('astro:page-load', initGalleries);
+</script>
+
+<style>
+  .gallery {
+    padding-block: 8px 0;
+    margin-bottom: 40px;
+  }
+
+  .gallery-title {
+    font-size: var(--text-xl);
+    margin-bottom: 18px;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .gallery-thumb {
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--bg-sunken);
+    aspect-ratio: 1 / 1;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .gallery-thumb:hover {
+    transform: translateY(-2px);
+    border-color: var(--brand-2);
+  }
+
+  .gallery-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(6, 3, 12, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lightbox[hidden] {
+    display: none;
+  }
+
+  .lightbox-stage {
+    position: relative;
+    max-width: min(90vw, 900px);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .lightbox-img {
+    display: none;
+    max-width: 100%;
+    max-height: 72vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+  }
+
+  .lightbox-img.active {
+    display: block;
+  }
+
+  .lightbox-caption {
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    margin: 10px 0 0;
+    opacity: 0.75;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .lightbox-nav {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0 12px;
+  }
+
+  .lightbox-nav:hover, .lightbox-close:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .lightbox-counter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    opacity: 0.75;
+  }
+
+  @media (max-width: 640px) {
+    .lightbox-nav { margin: 0 4px; }
+    .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  }
+</style>

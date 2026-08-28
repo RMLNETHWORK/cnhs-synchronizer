@@ -1,0 +1,119 @@
+---
+// On-demand rendered (see astro.config.mjs) — this route now serves two things at the same
+// path depending on the query string: the category listing (no query param), or a single
+// article (?<paramName>=<hash>). That's what lets /sports/?sport=<hash> exist at all instead
+// of /sports/<slug>/ — a static build can't branch on a query string, only a real per-request
+// render can.
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import ArticleView from '../../components/ArticleView.astro';
+import { CATEGORY_ORDER, CATEGORIES } from '../../lib/categories';
+import { getCardImage } from '../../lib/gallery';
+import { getArticleVideo } from '../../lib/video';
+import { generateHeadlineExcerpts } from '../../lib/excerpt';
+import { hashArticleId } from '../../lib/hash';
+
+const { category } = Astro.params as { category: keyof typeof CATEGORIES };
+const meta = CATEGORIES[category];
+
+if (!meta || !CATEGORY_ORDER.includes(category)) {
+  return Astro.rewrite('/404');
+}
+
+const articles = await getCollection(category, ({ data }) => !data.draft);
+articles.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+// If the URL carries this category's article param (e.g. ?sport=f3a9c2d1), find the matching
+// entry and render the single-article view instead of the listing below. An unrecognized or
+// missing hash just falls through to the normal listing rather than erroring.
+const requestedHash = Astro.url.searchParams.get(meta.paramName);
+const requestedEntry = requestedHash
+  ? articles.find((a) => hashArticleId(category, a.id) === requestedHash)
+  : undefined;
+---
+{requestedEntry ? (
+  <ArticleView entry={requestedEntry} category={category} />
+) : (
+<BaseLayout title={meta.label} description={meta.blurb} canonicalUrl={new URL(`/${meta.slug}/`, Astro.site).toString()}>
+  <section class="cat-hero">
+    <div class="wrap">
+      <span class="eyebrow">Section</span>
+      <h1 class="cat-title">{meta.label}</h1>
+      <p class="cat-blurb">{meta.blurb}</p>
+    </div>
+  </section>
+
+  <section class="cat-listing">
+    <div class="wrap">
+      {articles.length > 0 ? (
+        <div class="listing-grid">
+          {articles.map((article) => {
+            const videoInfo = getArticleVideo(category, article.id, article.data.videoUrl);
+            const thumb = getCardImage(category, article.id, article.data.classImage) || videoInfo?.thumbnailUrl;
+            const { title: titleExcerpt, lead: leadExcerpt } = generateHeadlineExcerpts(article.data.title, article.body);
+            return (
+              <ArticleCard
+                title={titleExcerpt || article.data.title}
+                excerpt={leadExcerpt}
+                date={article.data.date}
+                author={article.data.author}
+                href={`/${meta.slug}/?${meta.paramName}=${hashArticleId(category, article.id)}`}
+                image={thumb}
+                imageAlt={article.data.classImageAlt}
+                isVideo={!!videoInfo}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <p class="empty-state">No {meta.label.toLowerCase()} articles yet. Once writers send content in, it'll show up here.</p>
+      )}
+    </div>
+  </section>
+</BaseLayout>
+)}
+
+<style>
+  .cat-hero {
+    padding-block: 44px 28px;
+    border-bottom: 1px solid var(--line);
+    background: radial-gradient(ellipse 50% 60% at 90% 0%, var(--brand-glow), transparent 70%);
+  }
+
+  .cat-title {
+    font-size: clamp(32px, 5vw, 48px);
+    margin: 8px 0 8px;
+  }
+
+  .cat-blurb {
+    color: var(--ink-soft);
+    font-size: var(--text-base);
+    max-width: 50ch;
+    margin: 0;
+  }
+
+  .cat-listing {
+    padding-block: 40px 64px;
+  }
+
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .empty-state {
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 24px 0;
+  }
+
+  @media (max-width: 900px) {
+    .listing-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 560px) {
+    .listing-grid { grid-template-columns: 1fr; }
+  }
+</style>
